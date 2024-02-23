@@ -1,0 +1,41 @@
+digit = "0" |"1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+hex_letter = "A" | "B" | "C" | "D" | "E" | "F" | "a" | "b" | "c" | "d" | "e" | "f"; 
+
+boolean = "0" | "1";
+
+seperator = "_"
+
+
+index = {digit};
+
+range = index | index  ".." index;
+
+word = index "[]" | index "[" range "]" | index "[" literal "]";
+
+word_range = word ".." word [repeat]
+
+limit = {digit};
+
+repeat = ";" [word] condition limit ;
+
+condition = "" | "==" | "<" | "<=" ; (* "" is equivalent to "==" *) 
+
+
+(* TODO Words as variables *)
+
+literal = hex_literal | boolean_literal;
+
+hex_literal = hex_header {digit | hex_letter | seperator};
+
+hex_header = "0x"
+
+boolean_literal = boolean_header {boolean | seperator}
+
+boolean_header = "0b"
+
+
+
+
+
+
