@@ -28,11 +28,11 @@ literal = hex_literal | boolean_literal;
 
 hex_literal = hex_header {digit | hex_letter | seperator};
 
-hex_header = "0x"
+hex_header = "0x" | "0X"
 
 boolean_literal = boolean_header {boolean | seperator}
 
-boolean_header = "0b"
+boolean_header = "0b" | "0B"
 
 
 
