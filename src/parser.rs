@@ -11,17 +11,18 @@ use nom::{
     IResult,
     Parser,
 };
-// enum BitRange {
-//     Single(u8),
-//     Range(u8, u8),
-// }
-// fn index(input: &str) -> IResult<&str, u8> {
-//     (u8)(input)
-// }
+enum BitRange {
+    Single(u8),
+    Range(u8, u8),
+}
+
+fn index(input: &str) -> IResult<&str, u8> {
+    (u8)(input)
+}
 
 fn range(input: &str) -> IResult<&str, (u8, u8)> {
     //tuple((index, tag(".."), index))(input)
-    separated_pair(u8, tag(".."), u8)(input)
+    separated_pair(index, tag(".."), index)(input)
 }
 
 // fn bits(input: &str) -> IResult<&str, &str> {
@@ -57,24 +58,20 @@ mod tests {
         assert_eq!(r, (2, 45));
     }
 
-    // #[test]
-    // fn test_index() {
-    //     let data = "34";
-    //     let (_, i) = index(data).unwrap();
-    //     assert_eq!(i, 34);
+    #[test]
+    fn test_index() {
+        let data = "34";
+        let (_, i) = index(data).unwrap();
+        assert_eq!(i, 34);
 
-    //     let data = "7";
-    //     let (_, i) = index(data).unwrap();
-    //     assert_eq!(i, 7);
+        let data = "7";
+        let (_, i) = index(data).unwrap();
+        assert_eq!(i, 7);
 
-    //     let data = "48";
-    //     let (_, i) = index(data).unwrap();
-    //     assert_eq!(i, 48);
-
-    //     let data = "2345;";
-    //     let (_, i) = index(data).unwrap();
-    //     assert_eq!(i, 2345);
-    // }
+        let data = "48";
+        let (_, i) = index(data).unwrap();
+        assert_eq!(i, 48);
+    }
 
     #[test]
     fn test_hexadecimal() {
