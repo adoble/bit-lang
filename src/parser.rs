@@ -1,21 +1,27 @@
 use nom::{
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::{is_a, tag, take_while1},
     character::complete::{char, one_of},
-    combinator::recognize,
+    character::is_digit,
+    combinator::{map, recognize},
     multi::{many0, many1},
-    sequence::{preceded, terminated},
+    sequence::{preceded, terminated, tuple},
     IResult, Parser,
 };
-// use nom::number::complete::be_u16;
-
-pub fn hex_header(input: &str) -> IResult<&str, &str> {
-    tag("0x")(input)
+enum BitRange {
+    Single(usize),
+    Range(usize, usize),
+}
+fn index(input: &str) -> IResult<&str, &str> {
+    is_a("0123456789")(input)
 }
 
-// pub fn length_value(input: &[u8]) -> IResult<&[u8],&[u8]> {
-//     let (input, length) = be_u16(input)?;
-//     take(length)(input)
+fn range(input: &str) -> IResult<&str, (&str, &str, &str)> {
+    tuple((index, tag(".."), index))(input)
+}
+
+// fn bits(input: &str) -> IResult<&str, &str> {
+//     alt((index, range))(input)
 // }
 
 fn hexadecimal(input: &str) -> IResult<&str, &str> {
@@ -30,16 +36,40 @@ fn hexadecimal(input: &str) -> IResult<&str, &str> {
     .parse(input)
 }
 
+// Supporting seperated literals such 0x34_AB
+#[allow(dead_code)]
+fn seperated_hexadecimal(_input: &str) -> IResult<&str, &str> {
+    todo!()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn test_hex_header() {
-        let data = "0x4567";
+    fn test_range() {
+        let data = "2..45";
+        let (_, r) = range(data).unwrap();
+        assert_eq!(r, ("2", "..", "45"));
+    }
 
-        let (remaining, header) = hex_header(data).unwrap();
+    #[test]
+    fn test_index() {
+        let data = "34";
+        let (_, i) = index(data).unwrap();
+        assert_eq!(i, "34");
 
-        assert_eq!(header, "0x");
+        let data = "7";
+        let (_, i) = index(data).unwrap();
+        assert_eq!(i, "7");
+
+        let data = "48";
+        let (_, i) = index(data).unwrap();
+        assert_eq!(i, "48");
+
+        let data = "2345;";
+        let (_, i) = index(data).unwrap();
+        assert_eq!(i, "2345");
     }
 
     #[test]

@@ -9,9 +9,13 @@ seperator = "_"
 
 index = {digit};
 
-range = index | index  ".." index;
+range = index ".." index;
 
-word = index "[]" | index "[" range "]" | index "[" literal "]";
+bits = index | range; 
+
+bit_delimited = "[" bits "]";
+
+word = index bits_delimited | index "[" literal "]";
 
 word_range = word ".." word [repeat]
 
