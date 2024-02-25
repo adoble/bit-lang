@@ -4,7 +4,7 @@ use nom::{
     bytes::complete::{is_a, tag, take_while1},
     character::complete::{char, one_of, space0, u8},
     character::is_digit,
-    combinator::{into, map, recognize, value},
+    combinator::{into, map, opt, recognize, value},
     multi::{many0, many1},
     //number::complete::{i32, u8},
     sequence::{delimited, preceded, separated_pair, terminated, tuple},
@@ -20,7 +20,7 @@ enum BitSpec {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 struct Word {
-    index: u8,
+    index: Option<u8>,
     bit_spec: BitSpec,
 }
 
@@ -57,10 +57,10 @@ fn bit_spec_delimited(input: &str) -> IResult<&str, BitSpec> {
     Ok((remaining, bit_spec))
 }
 
-// word = index bits_spec_delimited | index "[" literal "]";
+// word = [index] bits_spec_delimited | index "[" literal "]";
 // TODO Ignore literals for the time being
 fn word(input: &str) -> IResult<&str, Word> {
-    let (remaining, (index, bit_spec)) = tuple((index, bit_spec_delimited))(input)?;
+    let (remaining, (index, bit_spec)) = tuple((opt(index), bit_spec_delimited))(input)?;
     Ok((remaining, Word { index, bit_spec }))
 }
 
@@ -93,7 +93,7 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: 3,
+                index: Some(3),
                 bit_spec: BitSpec::Range(2, 6)
             }
         );
@@ -103,7 +103,7 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: 3,
+                index: Some(3),
                 bit_spec: BitSpec::Single(6)
             }
         );
@@ -113,13 +113,30 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: 4,
+                index: Some(4),
                 bit_spec: BitSpec::WholeWord
             }
         );
 
         let data = "[]";
-        assert!(word(data).is_err());
+        let (_, r) = word(data).unwrap();
+        assert_eq!(
+            r,
+            Word {
+                index: None,
+                bit_spec: BitSpec::WholeWord
+            }
+        );
+
+        let data = "3[]";
+        let (_, r) = word(data).unwrap();
+        assert_eq!(
+            r,
+            Word {
+                index: Some(3),
+                bit_spec: BitSpec::WholeWord
+            }
+        );
 
         let data = "4";
         assert!(word(data).is_err());

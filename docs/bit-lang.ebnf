@@ -23,7 +23,7 @@ empty_bit_spec = "[" spaces "]";
 
 bit_spec_delimited = "[" bit_spec "]" | empty_bit_spec;
 
-word = index bits_spec_delimited | index "[" literal "]";
+word = [index] bits_spec_delimited | index "[" literal "]";
 
 word_range = word ".." word [repeat]
 
@@ -45,6 +45,8 @@ hex_header = "0x" | "0X"
 boolean_literal = boolean_header {boolean | seperator}
 
 boolean_header = "0b" | "0B"
+
+statement = bit_spec |  bit_spec_delimited | word | word_range ;
 
 
 
