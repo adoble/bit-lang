@@ -18,6 +18,12 @@ enum BitSpec {
     WholeWord,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+struct Word {
+    index: u8,
+    bit_spec: BitSpec,
+}
+
 fn index(input: &str) -> IResult<&str, u8> {
     (u8)(input)
 }
@@ -41,7 +47,7 @@ fn bit_spec(input: &str) -> IResult<&str, BitSpec> {
 
 fn empty_bit_spec(input: &str) -> IResult<&str, BitSpec> {
     // Required delimiters
-    let (remaining, s) = delimited(tag("["), space0, tag("]"))(input)?;
+    let (remaining, _) = delimited(tag("["), space0, tag("]"))(input)?;
     Ok((remaining, BitSpec::WholeWord))
 }
 
@@ -49,6 +55,13 @@ fn bit_spec_delimited(input: &str) -> IResult<&str, BitSpec> {
     let (remaining, bit_spec) =
         alt((delimited(tag("["), bit_spec, tag("]")), empty_bit_spec))(input)?;
     Ok((remaining, bit_spec))
+}
+
+// word = index bits_spec_delimited | index "[" literal "]";
+// TODO Ignore literals for the time being
+fn word(input: &str) -> IResult<&str, Word> {
+    let (remaining, (index, bit_spec)) = tuple((index, bit_spec_delimited))(input)?;
+    Ok((remaining, Word { index, bit_spec }))
 }
 
 fn hexadecimal(input: &str) -> IResult<&str, &str> {
@@ -72,6 +85,45 @@ fn seperated_hexadecimal(_input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_word() {
+        let data = "3[2..6]";
+        let (_, r) = word(data).unwrap();
+        assert_eq!(
+            r,
+            Word {
+                index: 3,
+                bit_spec: BitSpec::Range(2, 6)
+            }
+        );
+
+        let data = "3[6]";
+        let (_, r) = word(data).unwrap();
+        assert_eq!(
+            r,
+            Word {
+                index: 3,
+                bit_spec: BitSpec::Single(6)
+            }
+        );
+
+        let data = "4[]";
+        let (_, r) = word(data).unwrap();
+        assert_eq!(
+            r,
+            Word {
+                index: 4,
+                bit_spec: BitSpec::WholeWord
+            }
+        );
+
+        let data = "[]";
+        assert!(word(data).is_err());
+
+        let data = "4";
+        assert!(word(data).is_err());
+    }
 
     #[test]
     fn test_bit_spec_delimited() {
