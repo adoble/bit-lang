@@ -11,22 +11,24 @@ use nom::{
     IResult,
     Parser,
 };
+
+//TODO Change this to BitRange (as opposed to WordRange)
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum BitSpec {
+pub enum BitSpec {
     Single(u8),
     Range(u8, u8),
-    //WholeWord,
+    WholeWord,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct Word {
+pub struct Word {
     // No index refers to index = 0
     index: Option<u8>,
     // No bit spec refers to the whole word
-    bit_spec: Option<BitSpec>,
+    bit_spec: BitSpec,
 }
 
-struct Repeat;
+pub struct Repeat;
 
 struct Pattern {
     start: Word,
@@ -71,7 +73,18 @@ fn full_word(input: &str) -> IResult<&str, Word> {
     let (remaining, (index, _, bit_spec, _)) =
         tuple((opt(index), tag("["), opt(bit_spec), tag("]")))(input)?;
 
-    Ok((remaining, Word { index, bit_spec }))
+    let completed_bit_spec = match bit_spec {
+        Some(bit_spec) => bit_spec,
+        None => BitSpec::WholeWord,
+    };
+
+    Ok((
+        remaining,
+        Word {
+            index,
+            bit_spec: completed_bit_spec,
+        },
+    ))
 }
 
 // A bit spec - e.g. "3" or "4..6"  is also treaed as a full word, i.e.
@@ -84,7 +97,7 @@ fn bit_spec_as_word(input: &str) -> IResult<&str, Word> {
         remaining,
         Word {
             index: None,
-            bit_spec: Some(bit_spec),
+            bit_spec,
         },
     ))
 }
@@ -137,7 +150,7 @@ mod tests {
             r,
             Word {
                 index: Some(3),
-                bit_spec: Some(BitSpec::Range(2, 6))
+                bit_spec: BitSpec::Range(2, 6)
             }
         );
 
@@ -147,7 +160,7 @@ mod tests {
             r,
             Word {
                 index: Some(4),
-                bit_spec: None
+                bit_spec: BitSpec::WholeWord
             }
         );
 
@@ -157,7 +170,7 @@ mod tests {
             r,
             Word {
                 index: None,
-                bit_spec: None
+                bit_spec: BitSpec::WholeWord
             }
         );
 
@@ -167,7 +180,7 @@ mod tests {
             r,
             Word {
                 index: Some(3),
-                bit_spec: None
+                bit_spec: BitSpec::WholeWord
             }
         );
 
@@ -177,7 +190,7 @@ mod tests {
             r,
             Word {
                 index: None,
-                bit_spec: Some(BitSpec::Single(7))
+                bit_spec: BitSpec::Single(7)
             }
         )
     }
@@ -189,7 +202,7 @@ mod tests {
 
         let expected_word = Word {
             index: Some(3),
-            bit_spec: Some(BitSpec::Range(4, 6)),
+            bit_spec: BitSpec::Range(4, 6),
         };
 
         assert_eq!(r, expected_word);
@@ -198,7 +211,7 @@ mod tests {
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
             index: Some(9),
-            bit_spec: None,
+            bit_spec: BitSpec::WholeWord,
         };
         assert_eq!(r, expected_word);
 
@@ -206,7 +219,7 @@ mod tests {
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
             index: None,
-            bit_spec: Some(BitSpec::Range(3, 7)),
+            bit_spec: BitSpec::Range(3, 7),
         };
         assert_eq!(r, expected_word);
 
@@ -214,7 +227,7 @@ mod tests {
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
             index: None,
-            bit_spec: None,
+            bit_spec: BitSpec::WholeWord,
         };
         assert_eq!(r, expected_word);
     }
