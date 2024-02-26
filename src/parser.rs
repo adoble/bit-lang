@@ -24,6 +24,14 @@ struct Word {
     bit_spec: BitSpec,
 }
 
+struct Repeat;
+
+struct Pattern {
+    start: Word,
+    end: Option<Word>,
+    repeat: Option<Repeat>,
+}
+
 fn index(input: &str) -> IResult<&str, u8> {
     (u8)(input)
 }
