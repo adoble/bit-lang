@@ -31,7 +31,9 @@ limit = {digit};
 
 repeat = ";" [word] condition limit ;
 
-condition = "" | "==" | "<" | "<=" ; (* "" is equivalent to "==" *) 
+condition = "" | "==" | "<" | "<=" ; (* "" is equivalent to "==" *) ;
+
+repeating_word= word [word] [repeat];  
 
 
 (* TODO Words as variables *)
@@ -46,7 +48,7 @@ boolean_literal = boolean_header {boolean | seperator}
 
 boolean_header = "0b" | "0B"
 
-statement = bit_spec |  bit_spec_delimited | word | word_range ;
+statement = bit_spec |  bit_spec_delimited | word | word_range | repeating_word ;
 
 
 
