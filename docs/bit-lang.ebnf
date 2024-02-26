@@ -17,13 +17,15 @@ single_bit = index;
 
 range = index ".." index;
 
-bit_spec = index | range; 
+bit_spec = index | range;  (* NEW *)
 
-empty_bit_spec = "[" spaces "]"; 
+(* empty_bit_spec = "[" spaces "]"; 
 
-bit_spec_delimited = "[" bit_spec "]" | empty_bit_spec;
+bit_spec_delimited = "[" bit_spec "]" | empty_bit_spec; *)
 
-word = [index] bits_spec_delimited | index "[" literal "]";
+(* word = [index] bits_spec_delimited | index "[" literal "]"; *)   
+
+word = bit_spec | [index] "[" [bit_spec] "]" | index "[" literal "]";   (* NEW *)
 
 word_range = word ".." word [repeat]
 
