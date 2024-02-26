@@ -30,10 +30,11 @@ pub struct Word {
 
 pub struct Repeat;
 
-struct Pattern {
+#[derive(Debug, PartialEq, Copy, Clone)]
+struct WordRange {
     start: Word,
     end: Option<Word>,
-    repeat: Option<Repeat>,
+    //repeat: Option<Repeat>,
 }
 
 fn index(input: &str) -> IResult<&str, u8> {
@@ -92,18 +93,23 @@ fn bit_range_as_word(input: &str) -> IResult<&str, Word> {
 
 // word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 // TODO Ignore literals for the time being
-#[rustfmt::skip]
 fn word(input: &str) -> IResult<&str, Word> {
-    let (remaining, word) = alt(
-        (
-            full_word,
-            bit_range_as_word,
+    let (remaining, word) = alt((full_word, bit_range_as_word))(input)?;
 
-        )
-    )(input)?;
-
-    //let (remaining, (index, bit_spec)) = tuple((opt(index), bit_spec_delimited))(input)?;
     Ok((remaining, word))
+}
+
+// word_range = word [".." word] [repeat]
+// TODO ignore repeats for now
+fn word_range(input: &str) -> IResult<&str, WordRange> {
+    let (remaining, (start, end_option)) = tuple((word, opt(tuple((tag(".."), word)))))(input)?;
+
+    let end = match end_option {
+        Some((_, w)) => Some(w),
+        None => None,
+    };
+
+    Ok((remaining, WordRange { start, end }))
 }
 
 //fn pattern(input: &str) -> IResult<&str, Pattern> {}
@@ -129,6 +135,64 @@ fn seperated_hexadecimal(_input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_word_range() {
+        let data = "3[4..7]..6[0..5]";
+
+        let (_, r) = word_range(data).unwrap();
+
+        let expected = WordRange {
+            start: Word {
+                index: Some(3),
+                bit_range: BitRange::Range(4, 7),
+            },
+            end: Some(Word {
+                index: Some(6),
+                bit_range: BitRange::Range(0, 5),
+            }),
+        };
+        assert_eq!(r, expected);
+
+        let data = "4[]..7[]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: Some(4),
+                bit_range: BitRange::WholeWord,
+            },
+            end: Some(Word {
+                index: Some(7),
+                bit_range: BitRange::WholeWord,
+            }),
+        };
+        assert_eq!(r, expected);
+
+        let data = "[]..5[]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: None,
+                bit_range: BitRange::WholeWord,
+            },
+            end: Some(Word {
+                index: Some(5),
+                bit_range: BitRange::WholeWord,
+            }),
+        };
+        assert_eq!(r, expected);
+
+        let data = "[]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: None,
+                bit_range: BitRange::WholeWord,
+            },
+            end: None,
+        };
+        assert_eq!(r, expected);
+    }
 
     #[test]
     fn test_word() {

@@ -22,7 +22,7 @@ bit_range = index | range;  (* NEW *)
 
 word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 
-word_range = word ".." word [repeat]
+word_range = word [".." word] [repeat]
 
 limit = {digit};
 
