@@ -14,7 +14,7 @@ use nom::{
 
 //TODO Change this to BitRange (as opposed to WordRange)
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub enum BitSpec {
+pub enum BitRange {
     Single(u8),
     Range(u8, u8),
     WholeWord,
@@ -25,7 +25,7 @@ pub struct Word {
     // No index refers to index = 0
     index: Option<u8>,
     // No bit spec refers to the whole word
-    bit_spec: BitSpec,
+    bit_range: BitRange,
 }
 
 pub struct Repeat;
@@ -40,49 +40,37 @@ fn index(input: &str) -> IResult<&str, u8> {
     (u8)(input)
 }
 
-fn single_bit(input: &str) -> IResult<&str, BitSpec> {
+fn single_bit(input: &str) -> IResult<&str, BitRange> {
     let (remaining, position) = (index)(input)?;
 
-    Ok((remaining, BitSpec::Single(position)))
+    Ok((remaining, BitRange::Single(position)))
 }
 
-fn range(input: &str) -> IResult<&str, BitSpec> {
+fn range(input: &str) -> IResult<&str, BitRange> {
     //tuple((index, tag(".."), index))(input)
     let (remaining, (start, stop)) = separated_pair(index, tag(".."), index)(input)?;
 
-    Ok((remaining, BitSpec::Range(start, stop)))
+    Ok((remaining, BitRange::Range(start, stop)))
 }
 
-fn bit_spec(input: &str) -> IResult<&str, BitSpec> {
+fn bit_range(input: &str) -> IResult<&str, BitRange> {
     alt((range, single_bit))(input) // Order importantre
 }
 
-// fn empty_bit_spec(input: &str) -> IResult<&str, BitSpec> {
-//     // Required delimiters
-//     let (remaining, _) = delimited(tag("["), space0, tag("]"))(input)?;
-//     Ok((remaining, BitSpec::WholeWord))
-// }
-
-// fn bit_spec_delimited(input: &str) -> IResult<&str, BitSpec> {
-//     let (remaining, bit_spec) =
-//         alt((delimited(tag("["), bit_spec, tag("]")), empty_bit_spec))(input)?;
-//     Ok((remaining, bit_spec))
-// }
-
 fn full_word(input: &str) -> IResult<&str, Word> {
-    let (remaining, (index, _, bit_spec, _)) =
-        tuple((opt(index), tag("["), opt(bit_spec), tag("]")))(input)?;
+    let (remaining, (index, _, bit_range, _)) =
+        tuple((opt(index), tag("["), opt(bit_range), tag("]")))(input)?;
 
-    let completed_bit_spec = match bit_spec {
-        Some(bit_spec) => bit_spec,
-        None => BitSpec::WholeWord,
+    let completed_bit_range = match bit_range {
+        Some(bit_range) => bit_range,
+        None => BitRange::WholeWord,
     };
 
     Ok((
         remaining,
         Word {
             index,
-            bit_spec: completed_bit_spec,
+            bit_range: completed_bit_range,
         },
     ))
 }
@@ -90,26 +78,26 @@ fn full_word(input: &str) -> IResult<&str, Word> {
 // A bit spec - e.g. "3" or "4..6"  is also treaed as a full word, i.e.
 // "0[3]" or "0[4,..6]" respectively. This function maps the bit spec to
 // a word for later inclusion in highe level parsers
-fn bit_spec_as_word(input: &str) -> IResult<&str, Word> {
-    let (remaining, bit_spec) = (bit_spec)(input)?;
+fn bit_range_as_word(input: &str) -> IResult<&str, Word> {
+    let (remaining, bit_range) = (bit_range)(input)?;
 
     Ok((
         remaining,
         Word {
             index: None,
-            bit_spec,
+            bit_range,
         },
     ))
 }
 
-// word = bit_spec | [index] "[" [bit_spec] "]" | index "[" literal "]";   (* NEW *)
+// word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 // TODO Ignore literals for the time being
 #[rustfmt::skip]
 fn word(input: &str) -> IResult<&str, Word> {
     let (remaining, word) = alt(
         (
             full_word,
-            bit_spec_as_word,
+            bit_range_as_word,
 
         )
     )(input)?;
@@ -150,7 +138,7 @@ mod tests {
             r,
             Word {
                 index: Some(3),
-                bit_spec: BitSpec::Range(2, 6)
+                bit_range: BitRange::Range(2, 6)
             }
         );
 
@@ -160,7 +148,7 @@ mod tests {
             r,
             Word {
                 index: Some(4),
-                bit_spec: BitSpec::WholeWord
+                bit_range: BitRange::WholeWord
             }
         );
 
@@ -170,7 +158,7 @@ mod tests {
             r,
             Word {
                 index: None,
-                bit_spec: BitSpec::WholeWord
+                bit_range: BitRange::WholeWord
             }
         );
 
@@ -180,7 +168,7 @@ mod tests {
             r,
             Word {
                 index: Some(3),
-                bit_spec: BitSpec::WholeWord
+                bit_range: BitRange::WholeWord
             }
         );
 
@@ -190,7 +178,7 @@ mod tests {
             r,
             Word {
                 index: None,
-                bit_spec: BitSpec::Single(7)
+                bit_range: BitRange::Single(7)
             }
         )
     }
@@ -202,7 +190,7 @@ mod tests {
 
         let expected_word = Word {
             index: Some(3),
-            bit_spec: BitSpec::Range(4, 6),
+            bit_range: BitRange::Range(4, 6),
         };
 
         assert_eq!(r, expected_word);
@@ -211,7 +199,7 @@ mod tests {
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
             index: Some(9),
-            bit_spec: BitSpec::WholeWord,
+            bit_range: BitRange::WholeWord,
         };
         assert_eq!(r, expected_word);
 
@@ -219,7 +207,7 @@ mod tests {
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
             index: None,
-            bit_spec: BitSpec::Range(3, 7),
+            bit_range: BitRange::Range(3, 7),
         };
         assert_eq!(r, expected_word);
 
@@ -227,72 +215,34 @@ mod tests {
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
             index: None,
-            bit_spec: BitSpec::WholeWord,
+            bit_range: BitRange::WholeWord,
         };
         assert_eq!(r, expected_word);
     }
 
-    // #[test]
-    // fn test_bit_spec_delimited() {
-    //     let data = "[3..5]";
-    //     let (_, r) = bit_spec_delimited(data).unwrap();
-    //     assert_eq!(r, BitSpec::Range(3, 5));
-
-    //     let data = "[3]";
-    //     let (_, r) = bit_spec_delimited(data).unwrap();
-    //     assert_eq!(r, BitSpec::Single(3));
-
-    //     let data = "[ ]";
-    //     let (_, r) = bit_spec_delimited(data).unwrap();
-    //     assert_eq!(r, BitSpec::WholeWord);
-
-    //     let data = "3..4";
-    //     assert!(bit_spec_delimited(data).is_err());
-    // }
-    // #[test]
-    // fn test_empty_bit_spec() {
-    //     let data = "[]";
-
-    //     let (_, r) = empty_bit_spec(data).unwrap();
-    //     assert_eq!(r, BitSpec::WholeWord);
-
-    //     let data = "[ ]";
-
-    //     let (_, r) = empty_bit_spec(data).unwrap();
-    //     assert_eq!(r, BitSpec::WholeWord);
-
-    //     let data = "[    ]";
-
-    //     let (_, r) = empty_bit_spec(data).unwrap();
-    //     assert_eq!(r, BitSpec::WholeWord);
-
-    //     let data = "[3]";
-    //     assert!(empty_bit_spec(data).is_err());
-    // }
-
     #[test]
-    fn test_bit_spec() {
+    fn test_bit_range() {
         let data = "4..6";
-        let (_, r) = bit_spec(data).unwrap();
-        assert_eq!(r, BitSpec::Range(4, 6));
+        let (_, r) = bit_range(data).unwrap();
+        assert_eq!(r, BitRange::Range(4, 6));
 
         let data = "7";
-        let (_, r) = bit_spec(data).unwrap();
-        assert_eq!(r, BitSpec::Single(7));
+        let (_, r) = bit_range(data).unwrap();
+        assert_eq!(r, BitRange::Single(7));
     }
 
     #[test]
     fn test_single_bit() {
         let data = "2";
         let (_, r) = single_bit(data).unwrap();
-        assert_eq!(r, BitSpec::Single(2));
+        assert_eq!(r, BitRange::Single(2));
     }
 
     #[test]
     fn test_range() {
         let data = "2..45";
         let (_, r) = range(data).unwrap();
-        assert_eq!(r, BitSpec::Range(2, 45));
+        assert_eq!(r, BitRange::Range(2, 45));
     }
 
     #[test]
