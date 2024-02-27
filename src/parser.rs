@@ -23,7 +23,7 @@ pub enum BitRange {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Word {
     // No index refers to index = 0
-    index: Option<u8>,
+    index: u8,
     // No bit spec refers to the whole word
     bit_range: BitRange,
 }
@@ -70,13 +70,13 @@ fn full_word(input: &str) -> IResult<&str, Word> {
     Ok((
         remaining,
         Word {
-            index,
+            index: index.unwrap_or(0),
             bit_range: completed_bit_range,
         },
     ))
 }
 
-// A bit spec - e.g. "3" or "4..6"  is also treaed as a full word, i.e.
+// A bit spec - e.g. "3" or "4..6"  is also treated as a full word, i.e.
 // "0[3]" or "0[4,..6]" respectively. This function maps the bit spec to
 // a word for later inclusion in highe level parsers
 fn bit_range_as_word(input: &str) -> IResult<&str, Word> {
@@ -85,7 +85,7 @@ fn bit_range_as_word(input: &str) -> IResult<&str, Word> {
     Ok((
         remaining,
         Word {
-            index: None,
+            index: 0,
             bit_range,
         },
     ))
@@ -144,11 +144,11 @@ mod tests {
 
         let expected = WordRange {
             start: Word {
-                index: Some(3),
+                index: 3,
                 bit_range: BitRange::Range(4, 7),
             },
             end: Some(Word {
-                index: Some(6),
+                index: 6,
                 bit_range: BitRange::Range(0, 5),
             }),
         };
@@ -158,11 +158,11 @@ mod tests {
         let (_, r) = word_range(data).unwrap();
         let expected = WordRange {
             start: Word {
-                index: Some(4),
+                index: 4,
                 bit_range: BitRange::WholeWord,
             },
             end: Some(Word {
-                index: Some(7),
+                index: 7,
                 bit_range: BitRange::WholeWord,
             }),
         };
@@ -172,11 +172,11 @@ mod tests {
         let (_, r) = word_range(data).unwrap();
         let expected = WordRange {
             start: Word {
-                index: None,
+                index: 0,
                 bit_range: BitRange::WholeWord,
             },
             end: Some(Word {
-                index: Some(5),
+                index: 5,
                 bit_range: BitRange::WholeWord,
             }),
         };
@@ -186,7 +186,7 @@ mod tests {
         let (_, r) = word_range(data).unwrap();
         let expected = WordRange {
             start: Word {
-                index: None,
+                index: 0,
                 bit_range: BitRange::WholeWord,
             },
             end: None,
@@ -197,11 +197,11 @@ mod tests {
         let (_, r) = word_range(data).unwrap();
         let expected = WordRange {
             start: Word {
-                index: None,
+                index: 0,
                 bit_range: BitRange::WholeWord,
             },
             end: Some(Word {
-                index: Some(6),
+                index: 6,
                 bit_range: BitRange::Range(0, 5),
             }),
         };
@@ -215,11 +215,11 @@ mod tests {
         let (_, r) = word_range(data).unwrap();
         let expected = WordRange {
             start: Word {
-                index: None,
+                index: 0,
                 bit_range: BitRange::Range(3, 5),
             },
             end: Some(Word {
-                index: Some(4),
+                index: 4,
                 bit_range: BitRange::WholeWord,
             }),
         };
@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: Some(3),
+                index: 3,
                 bit_range: BitRange::Range(2, 6)
             }
         );
@@ -243,7 +243,7 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: Some(4),
+                index: 4,
                 bit_range: BitRange::WholeWord
             }
         );
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: None,
+                index: 0,
                 bit_range: BitRange::WholeWord
             }
         );
@@ -263,7 +263,7 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: Some(3),
+                index: 3,
                 bit_range: BitRange::WholeWord
             }
         );
@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(
             r,
             Word {
-                index: None,
+                index: 0,
                 bit_range: BitRange::Single(7)
             }
         )
@@ -285,7 +285,7 @@ mod tests {
         let (_, r) = full_word(data).unwrap();
 
         let expected_word = Word {
-            index: Some(3),
+            index: 3,
             bit_range: BitRange::Range(4, 6),
         };
 
@@ -294,7 +294,7 @@ mod tests {
         let data = "9[]";
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
-            index: Some(9),
+            index: 9,
             bit_range: BitRange::WholeWord,
         };
         assert_eq!(r, expected_word);
@@ -302,7 +302,7 @@ mod tests {
         let data = "[3..7]";
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
-            index: None,
+            index: 0,
             bit_range: BitRange::Range(3, 7),
         };
         assert_eq!(r, expected_word);
@@ -310,7 +310,7 @@ mod tests {
         let data = "[]";
         let (_, r) = full_word(data).unwrap();
         let expected_word = Word {
-            index: None,
+            index: 0,
             bit_range: BitRange::WholeWord,
         };
         assert_eq!(r, expected_word);
