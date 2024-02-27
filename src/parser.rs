@@ -192,6 +192,38 @@ mod tests {
             end: None,
         };
         assert_eq!(r, expected);
+
+        let data = "[]..6[0..5]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: None,
+                bit_range: BitRange::WholeWord,
+            },
+            end: Some(Word {
+                index: Some(6),
+                bit_range: BitRange::Range(0, 5),
+            }),
+        };
+        assert_eq!(r, expected);
+    }
+
+    // Not recommand, but still accepted patterns.
+    #[test]
+    fn test_word_range_special_cases() {
+        let data = "3..5..4[]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: None,
+                bit_range: BitRange::Range(3, 5),
+            },
+            end: Some(Word {
+                index: Some(4),
+                bit_range: BitRange::WholeWord,
+            }),
+        };
+        assert_eq!(r, expected);
     }
 
     #[test]
