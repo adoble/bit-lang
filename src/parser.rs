@@ -12,7 +12,6 @@ use nom::{
     Parser,
 };
 
-//TODO Change this to BitRange (as opposed to WordRange)
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum BitRange {
     Single(u8),
@@ -28,6 +27,12 @@ pub struct Word {
     bit_range: BitRange,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Condition {
+    Eq,
+    Lt,
+    Lte,
+}
 pub struct Repeat;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -112,7 +117,15 @@ fn word_range(input: &str) -> IResult<&str, WordRange> {
     Ok((remaining, WordRange { start, end }))
 }
 
-//fn pattern(input: &str) -> IResult<&str, Pattern> {}
+fn condition(input: &str) -> IResult<&str, Condition> {
+    let (remaining, condition) = alt((
+        value(Condition::Lte, tag("<=")),
+        value(Condition::Eq, tag("==")),
+        value(Condition::Lt, tag("<")),
+    ))(input)?;
+
+    Ok((remaining, condition))
+}
 
 fn hexadecimal(input: &str) -> IResult<&str, &str> {
     // <'a, E: ParseError<&'a str>>
@@ -135,6 +148,24 @@ fn seperated_hexadecimal(_input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_condition() {
+        let data = "<";
+        let (_, r) = condition(data).unwrap();
+        assert_eq!(r, Condition::Lt);
+
+        let data = "<=";
+        let (_, r) = condition(data).unwrap();
+        assert_eq!(r, Condition::Lte);
+
+        let data = "==";
+        let (_, r) = condition(data).unwrap();
+        assert_eq!(r, Condition::Eq);
+
+        let data = "";
+        assert!(condition(data).is_err());
+    }
 
     #[test]
     fn test_word_range() {
