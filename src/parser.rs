@@ -255,7 +255,7 @@ mod tests {
 
     #[test]
     fn test_variable_repeat() {
-        let data = "4[]<=48";
+        let data = "(4[])<=48";
         let (_, r) = variable_repeat(data).unwrap();
         let word = Word {
             index: 4,
@@ -269,7 +269,7 @@ mod tests {
         };
         assert_eq!(r, expected);
 
-        let data = "4[0..7]<49";
+        let data = "(4[0..7])<49";
         let (_, r) = variable_repeat(data).unwrap();
         let word = Word {
             index: 4,
