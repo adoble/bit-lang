@@ -10,8 +10,9 @@ white_space = " " | "\t";
 
 spaces = "" | {white_space};
 
+u8 = {digit}; (* Max. 255 *)
 
-index = {digit};
+index = u8;
 
 single_bit = index;
 
@@ -19,18 +20,20 @@ range = index ".." index;
 
 bit_range = index | range;  (* NEW *)
 
-
 word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 
 word_range = word [".." word] [repeat]
 
-limit = {digit};
+fixed_repeat = u8;
 
-repeat = ";" [word] condition limit ;
+limit = u8; 
 
-condition = "" | "==" | "<" | "<=" ; (* "" is equivalent to "==" *) ;
+condition =  "<" | "<=" ; 
 
-repeating_word= word [word] [repeat];  
+variable_repeat = word condition limit;
+
+repeat = ";" (fixed_repeat  | variable_repeat)  ;
+
 
 
 (* TODO Words as variables *)

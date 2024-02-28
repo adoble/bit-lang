@@ -2,7 +2,8 @@
 use nom::{
     branch::alt,
     bytes::complete::{is_a, tag, take_while1},
-    character::complete::{char, one_of, space0, u8},
+    character::complete::u8 as u8_parser,
+    character::complete::{char, one_of, space0},
     character::is_digit,
     combinator::{into, map, opt, recognize, value},
     multi::{many0, many1},
@@ -29,11 +30,33 @@ pub struct Word {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Condition {
-    Eq,
     Lt,
     Lte,
 }
-pub struct Repeat;
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Repeat {
+    // A simple fixed number of repititions
+    Fixed(u8),
+    // A variable number of repitions determined by another word and limited
+    Variable {
+        word: Word,
+        condition: Condition,
+        limit: u8,
+    },
+}
+
+// impl From<u8> for Limit {
+//     fn from(value: u8) -> Self {
+//         Limit::Literal(value)
+//     }
+// }
+
+// impl From<Word> for Limit {
+//     fn from(word: Word) -> Self {
+//         Limit::Word(word)
+//     }
+// }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 struct WordRange {
@@ -43,7 +66,7 @@ struct WordRange {
 }
 
 fn index(input: &str) -> IResult<&str, u8> {
-    (u8)(input)
+    (u8_parser)(input)
 }
 
 fn single_bit(input: &str) -> IResult<&str, BitRange> {
@@ -120,11 +143,51 @@ fn word_range(input: &str) -> IResult<&str, WordRange> {
 fn condition(input: &str) -> IResult<&str, Condition> {
     let (remaining, condition) = alt((
         value(Condition::Lte, tag("<=")),
-        value(Condition::Eq, tag("==")),
         value(Condition::Lt, tag("<")),
     ))(input)?;
 
     Ok((remaining, condition))
+}
+
+// fn fixed_limit_parser(input: &str) -> IResult<&str, Limit> {
+//     let (remaining, limit) = (u8_parser)(input)?;
+
+//     Ok((remaining, Limit::Literal(limit)))
+// }
+
+// fn word_limit_parser(input: &str) -> IResult<&str, Limit> {
+//     let (remaining, limit) = (full_word)(input)?;
+
+//     Ok((remaining, Limit::Word(limit)))
+// }
+
+// fn limit(input: &str) -> IResult<&str, Limit> {
+//     let (remaining, limit) = alt((word_limit_parser, fixed_limit_parser))(input)?;
+
+//     Ok((remaining, limit))
+// }
+
+fn fixed_repeat(input: &str) -> IResult<&str, Repeat> {
+    // let (remaining, r) = (u8_parser.map(|value| Repeat::Fixed(value)))(input)?;
+    let (remaining, repeat) = map(u8_parser, |value| Repeat::Fixed(value))(input)?;
+
+    Ok((remaining, repeat))
+}
+
+fn variable_repeat(input: &str) -> IResult<&str, Repeat> {
+    let (remaining, (word, condition, limit)) = tuple((word, condition, u8_parser))(input)?;
+    Ok((
+        remaining,
+        Repeat::Variable {
+            word,
+            condition,
+            limit,
+        },
+    ))
+}
+
+fn repeat(input: &str) -> IResult<&str, Repeat> {
+    todo!()
 }
 
 fn hexadecimal(input: &str) -> IResult<&str, &str> {
@@ -150,6 +213,43 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_variable_repeat() {
+        let data = "4[]<=48";
+        let (_, r) = variable_repeat(data).unwrap();
+        let word = Word {
+            index: 4,
+            bit_range: BitRange::WholeWord,
+        };
+
+        let expected = Repeat::Variable {
+            word,
+            condition: Condition::Lte,
+            limit: 48,
+        };
+        assert_eq!(r, expected);
+
+        let data = "4[0..7]<49";
+        let (_, r) = variable_repeat(data).unwrap();
+        let word = Word {
+            index: 4,
+            bit_range: BitRange::Range(0, 7),
+        };
+
+        let expected = Repeat::Variable {
+            word,
+            condition: Condition::Lt,
+            limit: 49,
+        };
+        assert_eq!(r, expected);
+    }
+    #[test]
+    fn test_fixed_repeat() {
+        let data = "48";
+        let (_, r) = fixed_repeat(data).unwrap();
+        assert_eq!(r, Repeat::Fixed(48));
+    }
+
+    #[test]
     fn test_condition() {
         let data = "<";
         let (_, r) = condition(data).unwrap();
@@ -159,11 +259,10 @@ mod tests {
         let (_, r) = condition(data).unwrap();
         assert_eq!(r, Condition::Lte);
 
-        let data = "==";
-        let (_, r) = condition(data).unwrap();
-        assert_eq!(r, Condition::Eq);
-
         let data = "";
+        assert!(condition(data).is_err());
+
+        let data = "==";
         assert!(condition(data).is_err());
     }
 
