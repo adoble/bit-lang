@@ -22,6 +22,8 @@ bit_range = index | range;  (* NEW *)
 
 word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 
+variable_word = "(" word ")";
+
 word_range = word [".." word] [repeat]
 
 fixed_repeat = u8;

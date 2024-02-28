@@ -174,8 +174,17 @@ fn fixed_repeat(input: &str) -> IResult<&str, Repeat> {
     Ok((remaining, repeat))
 }
 
+// variable_word = "(" word ")";
+fn variable_word(input: &str) -> IResult<&str, Word> {
+    // TODO see if  we can also use take_until() to solve ambiguity
+    let (remaining, word) = delimited(char('('), word, char(')'))(input)?;
+    Ok((remaining, word))
+}
+
+// variable_repeat = variable_word condition limit;
 fn variable_repeat(input: &str) -> IResult<&str, Repeat> {
-    let (remaining, (word, condition, limit)) = tuple((word, condition, u8_parser))(input)?;
+    let (remaining, (word, condition, limit)) =
+        tuple((variable_word, condition, u8_parser))(input)?;
     Ok((
         remaining,
         Repeat::Variable {
@@ -186,8 +195,12 @@ fn variable_repeat(input: &str) -> IResult<&str, Repeat> {
     ))
 }
 
+// repeat = ";" (fixed_repeat  | variable_repeat)  ;
 fn repeat(input: &str) -> IResult<&str, Repeat> {
-    todo!()
+    //let (remaining, (_, repeat)) = tuple((tag(";"), alt((variable_repeat, fixed_repeat))))(input)?;
+    let (remaining, repeat) = preceded(tag(";"), alt((variable_repeat, fixed_repeat)))(input)?;
+
+    Ok((remaining, repeat))
 }
 
 fn hexadecimal(input: &str) -> IResult<&str, &str> {
@@ -213,8 +226,36 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_repeat() {
+        let data = ";12";
+        let (_, r) = repeat(data).unwrap();
+        assert_eq!(r, Repeat::Fixed(12));
+
+        let data = ";6";
+        let (_, r) = repeat(data).unwrap();
+        assert_eq!(r, Repeat::Fixed(6));
+
+        let data = ";(4[])<49";
+        let (_, r) = repeat(data).unwrap();
+        let word = Word {
+            index: 4,
+            bit_range: BitRange::WholeWord,
+        };
+
+        let expected = Repeat::Variable {
+            word,
+            condition: Condition::Lt,
+            limit: 49,
+        };
+        assert_eq!(r, expected);
+
+        let data = ";(4[])";
+        assert!(repeat(data).is_err());
+    }
+
+    #[test]
     fn test_variable_repeat() {
-        let data = "4[]<=48";
+        let data = "(4[])<=48";
         let (_, r) = variable_repeat(data).unwrap();
         let word = Word {
             index: 4,
@@ -228,7 +269,7 @@ mod tests {
         };
         assert_eq!(r, expected);
 
-        let data = "4[0..7]<49";
+        let data = "(4[0..7])<49";
         let (_, r) = variable_repeat(data).unwrap();
         let word = Word {
             index: 4,
