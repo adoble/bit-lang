@@ -1,3 +1,4 @@
+use nom::combinator::all_consuming;
 #[allow(unused_imports)]
 use nom::{
     branch::alt,
@@ -119,6 +120,23 @@ fn bit_range_as_word(input: &str) -> IResult<&str, Word> {
     ))
 }
 
+fn word_literal(input: &str) -> IResult<&str, Word> {
+    let (input, index) = opt(index)(input)?;
+    let (input, _) = tag("[")(input)?;
+    let (input, literal) = literal(input)?;
+    let (remaining, _) = tag("]")(input)?;
+
+    todo!()
+
+    // Ok((
+    //     remaining,
+    //     Word {
+    //         index: 0,
+    //         bit_range,
+    //     },
+    // ))
+}
+
 // word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 // TODO Ignore literals for the time being
 fn word(input: &str) -> IResult<&str, Word> {
@@ -204,21 +222,35 @@ fn repeat(input: &str) -> IResult<&str, Repeat> {
 }
 
 fn hexadecimal(input: &str) -> IResult<&str, &str> {
-    // <'a, E: ParseError<&'a str>>
-    preceded(
-        alt((tag("0x"), tag("0X"))),
-        recognize(many1(terminated(
-            one_of("0123456789abcdefABCDEF"),
-            many0(char('_')),
-        ))),
-    )
-    .parse(input)
+    // preceded(
+    //     alt((tag("0x"), tag("0X"))),
+    //     recognize(many1(terminated(
+    //         one_of("0123456789abcdefABCDEF"),
+    //         many0(char('_')),
+    //     ))),
+    // )
+    // .parse(input)
+
+    let (input, _) = alt((tag("0x"), tag("0X")))(input)?;
+    //let (remaining, bin) = recognize(many1(one_of("01_")))(input)?;
+    let (remaining, hex) =
+        recognize(all_consuming(many1(one_of("0123456789abcdefABCDEF_"))))(input)?;
+
+    Ok((remaining, hex))
 }
 
-// Supporting seperated literals such 0x34_AB
+fn binary(input: &str) -> IResult<&str, &str> {
+    let (input, _) = alt((tag("0b"), tag("0B")))(input)?;
+    //let (remaining, bin) = recognize(many1(one_of("01_")))(input)?;
+    let (remaining, bin) = recognize(all_consuming(many1(one_of("01_"))))(input)?;
+
+    Ok((remaining, bin))
+}
+
 #[allow(dead_code)]
-fn seperated_hexadecimal(_input: &str) -> IResult<&str, &str> {
-    todo!()
+fn literal(input: &str) -> IResult<&str, &str> {
+    let (remaining, literal) = alt((hexadecimal, binary))(input)?;
+    Ok((remaining, literal))
 }
 
 #[cfg(test)]
@@ -528,10 +560,48 @@ mod tests {
     }
 
     #[test]
+    fn test_literal() {
+        let data = "0xABCD";
+        let (_, r) = literal(data).unwrap();
+        assert_eq!(r, "ABCD");
+
+        let data = "0b1011_1100";
+        let (_, r) = literal(data).unwrap();
+        assert_eq!(r, "1011_1100");
+
+        let data = "0b1011_11b0";
+        assert!(literal(data).is_err());
+
+        let data = "0Xab_zc";
+        assert!(literal(data).is_err());
+    }
+
+    #[test]
     fn test_hexadecimal() {
         let data = "0x45B7";
         let (_, hex) = hexadecimal(data).unwrap();
-
         assert_eq!(hex, "45B7");
+
+        let data = "0X45_B7";
+        let (_, hex) = hexadecimal(data).unwrap();
+        assert_eq!(hex, "45_B7");
+
+        // TODO test error
+    }
+
+    #[test]
+    fn test_binary() {
+        let data = "0b10001100";
+        let (_, bin) = binary(data).unwrap();
+        assert_eq!(bin, "10001100");
+
+        let data = "0b1000_1100";
+        let (_, bin) = binary(data).unwrap();
+        assert_eq!(bin, "1000_1100");
+
+        let data = "0b1100_AB";
+        assert!(binary(data).is_err());
+        // let (_, bin) = binary(data).unwrap();
+        // assert_eq!(bin, "1000_1100");
     }
 }

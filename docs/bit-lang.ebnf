@@ -20,7 +20,8 @@ range = index ".." index;
 
 bit_range = index | range;  (* NEW *)
 
-word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
+
+word = bit_range | [index] "[" [bit_range] "]" | [index] "[" literal "]";   (* NEW *)
 
 variable_word = "(" word ")";
 
