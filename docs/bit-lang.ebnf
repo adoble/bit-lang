@@ -20,7 +20,7 @@ range = index ".." index;
 
 bit_range = index | range;  (* NEW *)
 
-fully_qualified_word = [index] "[" bit_range"]";
+fully_qualified_word = [index] "[" bit_range"]";  (* TODO variable indexes *)
 
 word = bit_range | fully_qualified_word | [index] "[" literal "]";   (* NEW *)
 
@@ -53,7 +53,8 @@ boolean_literal = boolean_header {boolean | seperator}
 
 boolean_header = "0b" | "0B";
 
-bit_spec = bit_range |  bit_range_delimited | word | word_range | [repeat] ;
+(* Top level *)
+bit_spec = bit_range |  word_range  [repeat] ;    (* bit_spec is equivalent to word_range)
 
 
 

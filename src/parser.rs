@@ -86,8 +86,16 @@ pub enum Repeat {
 struct WordRange {
     start: Word,
     end: Option<Word>,
-    //repeat: Option<Repeat>,
+    repeat: Option<Repeat>,
 }
+
+//bit_spec = bit_range |  word_range  [repeat] ;
+// #[derive(Debug, PartialEq, Clone)]
+// pub enum BitSpec {
+//     BitRange(BitRange),
+//     WordRange()
+
+// }
 
 fn index(input: &str) -> IResult<&str, u8> {
     (u8_parser)(input)
@@ -169,14 +177,10 @@ fn word(input: &str) -> IResult<&str, Word> {
 // word_range = word [".." word] [repeat]
 // TODO ignore repeats for now
 fn word_range(input: &str) -> IResult<&str, WordRange> {
-    let (remaining, (start, end_option)) = tuple((word, opt(tuple((tag(".."), word)))))(input)?;
+    let (remaining, (start, end, repeat)) =
+        tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
 
-    let end = match end_option {
-        Some((_, w)) => Some(w),
-        None => None,
-    };
-
-    Ok((remaining, WordRange { start, end }))
+    Ok((remaining, WordRange { start, end, repeat }))
 }
 
 fn condition(input: &str) -> IResult<&str, Condition> {
@@ -251,11 +255,13 @@ fn binary(input: &str) -> IResult<&str, LiteralType> {
     Ok((remaining, LiteralType::Bin(bin.to_string())))
 }
 
-#[allow(dead_code)]
 fn literal(input: &str) -> IResult<&str, LiteralType> {
     let (remaining, literal) = alt((hexadecimal, binary))(input)?;
     Ok((remaining, literal))
 }
+
+// The top level statement:
+// bit_spec = bit_range |  word_range  [repeat] ;
 
 #[cfg(test)]
 mod tests {
@@ -366,6 +372,111 @@ mod tests {
     }
 
     #[test]
+    fn test_word_range_with_simple_forms() {
+        let data = "4";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: 0,
+                bit_range: BitRange::Single(4),
+            },
+            end: None,
+            repeat: None,
+        };
+        assert_eq!(r, expected);
+
+        let data = "4..6";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: 0,
+                bit_range: BitRange::Range(4, 6),
+            },
+            end: None,
+            repeat: None,
+        };
+        assert_eq!(r, expected);
+
+        let data = "[4..6]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: 0,
+                bit_range: BitRange::Range(4, 6),
+            },
+            end: None,
+            repeat: None,
+        };
+        assert_eq!(r, expected);
+
+        let data = "5[3..7]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: 5,
+                bit_range: BitRange::Range(3, 7),
+            },
+            end: None,
+            repeat: None,
+        };
+        assert_eq!(r, expected);
+
+        let data = "5[]";
+        let (_, r) = word_range(data).unwrap();
+        let expected = WordRange {
+            start: Word {
+                index: 5,
+                bit_range: BitRange::WholeWord,
+            },
+            end: None,
+            repeat: None,
+        };
+        assert_eq!(r, expected);
+    }
+
+    #[test]
+    fn test_word_range_with_repeat() {
+        let data = "3[4..7]..6[0..5];48";
+
+        let (_, r) = word_range(data).unwrap();
+
+        let expected = WordRange {
+            start: Word {
+                index: 3,
+                bit_range: BitRange::Range(4, 7),
+            },
+            end: Some(Word {
+                index: 6,
+                bit_range: BitRange::Range(0, 5),
+            }),
+            repeat: Some(Repeat::Fixed(48)),
+        };
+        assert_eq!(r, expected);
+
+        let data = "4[]..7[];(3[])<49";
+        let (_, r) = word_range(data).unwrap();
+        let repeat = Repeat::Variable {
+            word: Word {
+                index: 3,
+                bit_range: BitRange::WholeWord,
+            },
+            condition: Condition::Lt,
+            limit: 49,
+        };
+        let expected = WordRange {
+            start: Word {
+                index: 4,
+                bit_range: BitRange::WholeWord,
+            },
+            end: Some(Word {
+                index: 7,
+                bit_range: BitRange::WholeWord,
+            }),
+            repeat: Some(repeat),
+        };
+        assert_eq!(r, expected);
+    }
+    #[test]
     fn test_word_range() {
         let data = "3[4..7]..6[0..5]";
 
@@ -380,6 +491,7 @@ mod tests {
                 index: 6,
                 bit_range: BitRange::Range(0, 5),
             }),
+            repeat: None,
         };
         assert_eq!(r, expected);
 
@@ -394,6 +506,7 @@ mod tests {
                 index: 7,
                 bit_range: BitRange::WholeWord,
             }),
+            repeat: None,
         };
         assert_eq!(r, expected);
 
@@ -408,6 +521,7 @@ mod tests {
                 index: 5,
                 bit_range: BitRange::WholeWord,
             }),
+            repeat: None,
         };
         assert_eq!(r, expected);
 
@@ -419,6 +533,7 @@ mod tests {
                 bit_range: BitRange::WholeWord,
             },
             end: None,
+            repeat: None,
         };
         assert_eq!(r, expected);
 
@@ -433,11 +548,12 @@ mod tests {
                 index: 6,
                 bit_range: BitRange::Range(0, 5),
             }),
+            repeat: None,
         };
         assert_eq!(r, expected);
     }
 
-    // Not recommand, but still accepted patterns.
+    // Not recommanded, but still accepted patterns.
     #[test]
     fn test_word_range_special_cases() {
         let data = "3..5..4[]";
@@ -451,6 +567,7 @@ mod tests {
                 index: 4,
                 bit_range: BitRange::WholeWord,
             }),
+            repeat: None,
         };
         assert_eq!(r, expected);
     }
