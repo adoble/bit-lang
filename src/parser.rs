@@ -110,7 +110,7 @@ fn bit_range(input: &str) -> IResult<&str, BitRange> {
     alt((range, single_bit))(input) // Order importantre
 }
 
-fn full_word(input: &str) -> IResult<&str, Word> {
+fn fully_qualified_word(input: &str) -> IResult<&str, Word> {
     let (remaining, (index, _, bit_range, _)) =
         tuple((opt(index), tag("["), opt(bit_range), tag("]")))(input)?;
 
@@ -161,7 +161,7 @@ fn literal_word(input: &str) -> IResult<&str, Word> {
 // word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 // TODO Ignore literals for the time being
 fn word(input: &str) -> IResult<&str, Word> {
-    let (remaining, word) = alt((full_word, bit_range_as_word, literal_word))(input)?;
+    let (remaining, word) = alt((fully_qualified_word, bit_range_as_word, literal_word))(input)?;
 
     Ok((remaining, word))
 }
@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn test_full_word() {
         let data = "3[4..6]";
-        let (_, r) = full_word(data).unwrap();
+        let (_, r) = fully_qualified_word(data).unwrap();
 
         let expected_word = Word {
             index: 3,
@@ -521,7 +521,7 @@ mod tests {
         assert_eq!(r, expected_word);
 
         let data = "9[]";
-        let (_, r) = full_word(data).unwrap();
+        let (_, r) = fully_qualified_word(data).unwrap();
         let expected_word = Word {
             index: 9,
             bit_range: BitRange::WholeWord,
@@ -529,7 +529,7 @@ mod tests {
         assert_eq!(r, expected_word);
 
         let data = "[3..7]";
-        let (_, r) = full_word(data).unwrap();
+        let (_, r) = fully_qualified_word(data).unwrap();
         let expected_word = Word {
             index: 0,
             bit_range: BitRange::Range(3, 7),
@@ -537,7 +537,7 @@ mod tests {
         assert_eq!(r, expected_word);
 
         let data = "[]";
-        let (_, r) = full_word(data).unwrap();
+        let (_, r) = fully_qualified_word(data).unwrap();
         let expected_word = Word {
             index: 0,
             bit_range: BitRange::WholeWord,

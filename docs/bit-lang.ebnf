@@ -20,8 +20,10 @@ range = index ".." index;
 
 bit_range = index | range;  (* NEW *)
 
+fully_qualified_word = [index] "[" bit_range"]";
 
-word = bit_range | [index] "[" [bit_range] "]" | [index] "[" literal "]";   (* NEW *)
+word = bit_range | fully_qualified_word | [index] "[" literal "]";   (* NEW *)
+
 
 variable_word = "(" word ")";
 
@@ -35,7 +37,7 @@ condition =  "<" | "<=" ;
 
 variable_repeat = word condition limit;
 
-repeat = ";" (fixed_repeat  | variable_repeat)  ;
+repeat = ";" (fixed_repeat  | variable_repeat);
 
 
 
@@ -49,9 +51,9 @@ hex_header = "0x" | "0X"
 
 boolean_literal = boolean_header {boolean | seperator}
 
-boolean_header = "0b" | "0B"
+boolean_header = "0b" | "0B";
 
-statement = bit_range |  bit_range_delimited | word | word_range | repeating_word ;
+bit_spec = bit_range |  bit_range_delimited | word | word_range | [repeat] ;
 
 
 
