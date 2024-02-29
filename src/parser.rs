@@ -14,14 +14,35 @@ use nom::{
     Parser,
 };
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
+enum LiteralType {
+    Hex(String),
+    Bin(String),
+}
+
+// impl From<&str> for LiteralType {
+//     fn from(value: &str) -> Self {
+//         match value {
+//             "0x" => LiteralType::Hex,
+//             "0X" => LiteralType::Hex,
+//             "0b" => LiteralType::Bin,
+//             "0B" => LiteralType::Bin,
+//             _ => LiteralType::Unknown,
+//         }
+//     }
+// }
+
+// #[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum BitRange {
     Single(u8),
     Range(u8, u8),
     WholeWord,
+    Literal(LiteralType),
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+//#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Word {
     // No index refers to index = 0
     index: u8,
@@ -35,7 +56,8 @@ pub enum Condition {
     Lte,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+// #[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Repeat {
     // A simple fixed number of repititions
     Fixed(u8),
@@ -59,7 +81,8 @@ pub enum Repeat {
 //     }
 // }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+// #[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 struct WordRange {
     start: Word,
     end: Option<Word>,
@@ -120,27 +143,25 @@ fn bit_range_as_word(input: &str) -> IResult<&str, Word> {
     ))
 }
 
-fn word_literal(input: &str) -> IResult<&str, Word> {
+fn literal_word(input: &str) -> IResult<&str, Word> {
     let (input, index) = opt(index)(input)?;
     let (input, _) = tag("[")(input)?;
     let (input, literal) = literal(input)?;
     let (remaining, _) = tag("]")(input)?;
 
-    todo!()
-
-    // Ok((
-    //     remaining,
-    //     Word {
-    //         index: 0,
-    //         bit_range,
-    //     },
-    // ))
+    Ok((
+        remaining,
+        Word {
+            index: index.unwrap_or(0),
+            bit_range: BitRange::Literal(literal),
+        },
+    ))
 }
 
 // word = bit_range | [index] "[" [bit_range] "]" | index "[" literal "]";   (* NEW *)
 // TODO Ignore literals for the time being
 fn word(input: &str) -> IResult<&str, Word> {
-    let (remaining, word) = alt((full_word, bit_range_as_word))(input)?;
+    let (remaining, word) = alt((full_word, bit_range_as_word, literal_word))(input)?;
 
     Ok((remaining, word))
 }
@@ -166,24 +187,6 @@ fn condition(input: &str) -> IResult<&str, Condition> {
 
     Ok((remaining, condition))
 }
-
-// fn fixed_limit_parser(input: &str) -> IResult<&str, Limit> {
-//     let (remaining, limit) = (u8_parser)(input)?;
-
-//     Ok((remaining, Limit::Literal(limit)))
-// }
-
-// fn word_limit_parser(input: &str) -> IResult<&str, Limit> {
-//     let (remaining, limit) = (full_word)(input)?;
-
-//     Ok((remaining, Limit::Word(limit)))
-// }
-
-// fn limit(input: &str) -> IResult<&str, Limit> {
-//     let (remaining, limit) = alt((word_limit_parser, fixed_limit_parser))(input)?;
-
-//     Ok((remaining, limit))
-// }
 
 fn fixed_repeat(input: &str) -> IResult<&str, Repeat> {
     // let (remaining, r) = (u8_parser.map(|value| Repeat::Fixed(value)))(input)?;
@@ -221,7 +224,7 @@ fn repeat(input: &str) -> IResult<&str, Repeat> {
     Ok((remaining, repeat))
 }
 
-fn hexadecimal(input: &str) -> IResult<&str, &str> {
+fn hexadecimal(input: &str) -> IResult<&str, LiteralType> {
     // preceded(
     //     alt((tag("0x"), tag("0X"))),
     //     recognize(many1(terminated(
@@ -234,21 +237,22 @@ fn hexadecimal(input: &str) -> IResult<&str, &str> {
     let (input, _) = alt((tag("0x"), tag("0X")))(input)?;
     //let (remaining, bin) = recognize(many1(one_of("01_")))(input)?;
     let (remaining, hex) =
-        recognize(all_consuming(many1(one_of("0123456789abcdefABCDEF_"))))(input)?;
+        // recognize(all_consuming(many1(one_of("0123456789abcdefABCDEF_"))))(input)?;
+        recognize(many1(one_of("0123456789abcdefABCDEF_")))(input)?;
 
-    Ok((remaining, hex))
+    Ok((remaining, LiteralType::Hex(hex.to_string())))
 }
 
-fn binary(input: &str) -> IResult<&str, &str> {
+fn binary(input: &str) -> IResult<&str, LiteralType> {
     let (input, _) = alt((tag("0b"), tag("0B")))(input)?;
     //let (remaining, bin) = recognize(many1(one_of("01_")))(input)?;
-    let (remaining, bin) = recognize(all_consuming(many1(one_of("01_"))))(input)?;
+    let (remaining, bin) = recognize(many1(one_of("01_")))(input)?;
 
-    Ok((remaining, bin))
+    Ok((remaining, LiteralType::Bin(bin.to_string())))
 }
 
 #[allow(dead_code)]
-fn literal(input: &str) -> IResult<&str, &str> {
+fn literal(input: &str) -> IResult<&str, LiteralType> {
     let (remaining, literal) = alt((hexadecimal, binary))(input)?;
     Ok((remaining, literal))
 }
@@ -256,6 +260,28 @@ fn literal(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_literal_word() {
+        let data = "[0x1234]";
+        let (_, r) = literal_word(data).unwrap();
+        let expected = Word {
+            index: 0,
+            bit_range: BitRange::Literal(LiteralType::Hex("1234".to_string())),
+        };
+        assert_eq!(r, expected);
+
+        let data = "4[0b0011_1100]";
+        let (_, r) = literal_word(data).unwrap();
+        let expected = Word {
+            index: 4,
+            bit_range: BitRange::Literal(LiteralType::Bin("0011_1100".to_string())),
+        };
+        assert_eq!(r, expected);
+
+        let data = "5[0b0011ABCD]";
+        assert!(literal_word(data).is_err());
+    }
 
     #[test]
     fn test_repeat() {
@@ -563,45 +589,38 @@ mod tests {
     fn test_literal() {
         let data = "0xABCD";
         let (_, r) = literal(data).unwrap();
-        assert_eq!(r, "ABCD");
+        assert_eq!(r, LiteralType::Hex("ABCD".to_string()));
 
         let data = "0b1011_1100";
         let (_, r) = literal(data).unwrap();
-        assert_eq!(r, "1011_1100");
+        assert_eq!(r, LiteralType::Bin("1011_1100".to_string()));
 
-        let data = "0b1011_11b0";
-        assert!(literal(data).is_err());
+        // let data = "0b1011_11b0";
+        // assert!(literal(data).is_err());
 
-        let data = "0Xab_zc";
-        assert!(literal(data).is_err());
+        // let data = "0Xab_zc";
+        // assert!(literal(data).is_err());
     }
 
     #[test]
     fn test_hexadecimal() {
         let data = "0x45B7";
         let (_, hex) = hexadecimal(data).unwrap();
-        assert_eq!(hex, "45B7");
+        assert_eq!(hex, LiteralType::Hex("45B7".to_string()));
 
         let data = "0X45_B7";
         let (_, hex) = hexadecimal(data).unwrap();
-        assert_eq!(hex, "45_B7");
-
-        // TODO test error
+        assert_eq!(hex, LiteralType::Hex("45_B7".to_string()));
     }
 
     #[test]
     fn test_binary() {
         let data = "0b10001100";
         let (_, bin) = binary(data).unwrap();
-        assert_eq!(bin, "10001100");
+        assert_eq!(bin, LiteralType::Bin("10001100".to_string()));
 
         let data = "0b1000_1100";
         let (_, bin) = binary(data).unwrap();
-        assert_eq!(bin, "1000_1100");
-
-        let data = "0b1100_AB";
-        assert!(binary(data).is_err());
-        // let (_, bin) = binary(data).unwrap();
-        // assert_eq!(bin, "1000_1100");
+        assert_eq!(bin, LiteralType::Bin("1000_1100".to_string()));
     }
 }
