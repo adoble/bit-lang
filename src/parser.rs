@@ -55,33 +55,13 @@ pub enum Repeat {
     },
 }
 
-// impl From<u8> for Limit {
-//     fn from(value: u8) -> Self {
-//         Limit::Literal(value)
-//     }
-// }
-
-// impl From<Word> for Limit {
-//     fn from(word: Word) -> Self {
-//         Limit::Word(word)
-//     }
-// }
-
 // #[derive(Debug, PartialEq, Copy, Clone)]
 #[derive(Debug, PartialEq, Clone)]
-struct WordRange {
+struct BitSpec {
     start: Word,
     end: Option<Word>,
     repeat: Option<Repeat>,
 }
-
-//bit_spec = bit_range |  word_range  [repeat] ;
-// #[derive(Debug, PartialEq, Clone)]
-// pub enum BitSpec {
-//     BitRange(BitRange),
-//     WordRange()
-
-// }
 
 fn index(input: &str) -> IResult<&str, u8> {
     (u8_parser)(input)
@@ -239,11 +219,11 @@ fn literal(input: &str) -> IResult<&str, LiteralType> {
 
 // This is the top level parser
 // word_range = word [".." word] [repeat]
-fn bit_spec(input: &str) -> IResult<&str, WordRange> {
+fn bit_spec(input: &str) -> IResult<&str, BitSpec> {
     let (remaining, (start, end, repeat)) =
         tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
 
-    Ok((remaining, WordRange { start, end, repeat }))
+    Ok((remaining, BitSpec { start, end, repeat }))
 }
 
 #[cfg(test)]
@@ -358,7 +338,7 @@ mod tests {
     fn test_bit_spec_with_simple_forms() {
         let data = "4";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 0,
                 bit_range: BitRange::Single(4),
@@ -370,7 +350,7 @@ mod tests {
 
         let data = "4..6";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 0,
                 bit_range: BitRange::Range(4, 6),
@@ -382,7 +362,7 @@ mod tests {
 
         let data = "[4..6]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 0,
                 bit_range: BitRange::Range(4, 6),
@@ -394,7 +374,7 @@ mod tests {
 
         let data = "5[3..7]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 5,
                 bit_range: BitRange::Range(3, 7),
@@ -406,7 +386,7 @@ mod tests {
 
         let data = "5[]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 5,
                 bit_range: BitRange::WholeWord,
@@ -423,7 +403,7 @@ mod tests {
 
         let (_, r) = bit_spec(data).unwrap();
 
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 3,
                 bit_range: BitRange::Range(4, 7),
@@ -446,7 +426,7 @@ mod tests {
             condition: Condition::Lt,
             limit: 49,
         };
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 4,
                 bit_range: BitRange::WholeWord,
@@ -465,7 +445,7 @@ mod tests {
 
         let (_, r) = bit_spec(data).unwrap();
 
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 3,
                 bit_range: BitRange::Range(4, 7),
@@ -480,7 +460,7 @@ mod tests {
 
         let data = "4[]..7[]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 4,
                 bit_range: BitRange::WholeWord,
@@ -495,7 +475,7 @@ mod tests {
 
         let data = "[]..5[]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 0,
                 bit_range: BitRange::WholeWord,
@@ -510,7 +490,7 @@ mod tests {
 
         let data = "[]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 0,
                 bit_range: BitRange::WholeWord,
@@ -522,7 +502,7 @@ mod tests {
 
         let data = "[]..6[0..5]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 0,
                 bit_range: BitRange::WholeWord,
@@ -541,7 +521,7 @@ mod tests {
     fn test_bit_spec_special_cases() {
         let data = "3..5..4[]";
         let (_, r) = bit_spec(data).unwrap();
-        let expected = WordRange {
+        let expected = BitSpec {
             start: Word {
                 index: 0,
                 bit_range: BitRange::Range(3, 5),
