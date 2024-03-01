@@ -1,4 +1,3 @@
-use nom::combinator::all_consuming;
 #[allow(unused_imports)]
 use nom::{
     branch::alt,
@@ -6,7 +5,7 @@ use nom::{
     character::complete::u8 as u8_parser,
     character::complete::{char, one_of, space0},
     character::is_digit,
-    combinator::{into, map, opt, recognize, value},
+    combinator::{all_consuming, into, map, opt, recognize, value},
     multi::{many0, many1},
     //number::complete::{i32, u8},
     sequence::{delimited, preceded, separated_pair, terminated, tuple},
@@ -15,24 +14,11 @@ use nom::{
 };
 
 #[derive(Debug, PartialEq, Clone)]
-enum LiteralType {
+pub enum LiteralType {
     Hex(String),
     Bin(String),
 }
 
-// impl From<&str> for LiteralType {
-//     fn from(value: &str) -> Self {
-//         match value {
-//             "0x" => LiteralType::Hex,
-//             "0X" => LiteralType::Hex,
-//             "0b" => LiteralType::Bin,
-//             "0B" => LiteralType::Bin,
-//             _ => LiteralType::Unknown,
-//         }
-//     }
-// }
-
-// #[derive(Debug, PartialEq, Copy, Clone)]
 #[derive(Debug, PartialEq, Clone)]
 pub enum BitRange {
     Single(u8),
