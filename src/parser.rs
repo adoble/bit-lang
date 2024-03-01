@@ -174,15 +174,6 @@ fn word(input: &str) -> IResult<&str, Word> {
     Ok((remaining, word))
 }
 
-// word_range = word [".." word] [repeat]
-// TODO ignore repeats for now
-fn word_range(input: &str) -> IResult<&str, WordRange> {
-    let (remaining, (start, end, repeat)) =
-        tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
-
-    Ok((remaining, WordRange { start, end, repeat }))
-}
-
 fn condition(input: &str) -> IResult<&str, Condition> {
     let (remaining, condition) = alt((
         value(Condition::Lte, tag("<=")),
@@ -260,8 +251,14 @@ fn literal(input: &str) -> IResult<&str, LiteralType> {
     Ok((remaining, literal))
 }
 
-// The top level statement:
-// bit_spec = bit_range |  word_range  [repeat] ;
+// This is the top level parser
+// word_range = word [".." word] [repeat]
+fn bit_spec(input: &str) -> IResult<&str, WordRange> {
+    let (remaining, (start, end, repeat)) =
+        tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
+
+    Ok((remaining, WordRange { start, end, repeat }))
+}
 
 #[cfg(test)]
 mod tests {
@@ -374,7 +371,7 @@ mod tests {
     #[test]
     fn test_word_range_with_simple_forms() {
         let data = "4";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 0,
@@ -386,7 +383,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "4..6";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 0,
@@ -398,7 +395,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "[4..6]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 0,
@@ -410,7 +407,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "5[3..7]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 5,
@@ -422,7 +419,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "5[]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 5,
@@ -438,7 +435,7 @@ mod tests {
     fn test_word_range_with_repeat() {
         let data = "3[4..7]..6[0..5];48";
 
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
 
         let expected = WordRange {
             start: Word {
@@ -454,7 +451,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "4[]..7[];(3[])<49";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let repeat = Repeat::Variable {
             word: Word {
                 index: 3,
@@ -480,7 +477,7 @@ mod tests {
     fn test_word_range() {
         let data = "3[4..7]..6[0..5]";
 
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
 
         let expected = WordRange {
             start: Word {
@@ -496,7 +493,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "4[]..7[]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 4,
@@ -511,7 +508,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "[]..5[]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 0,
@@ -526,7 +523,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "[]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 0,
@@ -538,7 +535,7 @@ mod tests {
         assert_eq!(r, expected);
 
         let data = "[]..6[0..5]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 0,
@@ -557,7 +554,7 @@ mod tests {
     #[test]
     fn test_word_range_special_cases() {
         let data = "3..5..4[]";
-        let (_, r) = word_range(data).unwrap();
+        let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
             start: Word {
                 index: 0,

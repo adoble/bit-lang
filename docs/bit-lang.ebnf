@@ -27,7 +27,6 @@ word = bit_range | fully_qualified_word | [index] "[" literal "]";   (* NEW *)
 
 variable_word = "(" word ")";
 
-word_range = word [".." word] [repeat]
 
 fixed_repeat = u8;
 
@@ -36,6 +35,7 @@ limit = u8;
 condition =  "<" | "<=" ; 
 
 variable_repeat = word condition limit;
+
 
 repeat = ";" (fixed_repeat  | variable_repeat);
 
@@ -53,8 +53,7 @@ boolean_literal = boolean_header {boolean | seperator}
 
 boolean_header = "0b" | "0B";
 
-(* Top level *)
-bit_spec = bit_range |  word_range  [repeat] ;    (* bit_spec is equivalent to word_range)
+bit_spec = word [".." word] [repeat]
 
 
 
