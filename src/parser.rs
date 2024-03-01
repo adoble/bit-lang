@@ -369,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn test_word_range_with_simple_forms() {
+    fn test_bit_spec_with_simple_forms() {
         let data = "4";
         let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
@@ -432,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn test_word_range_with_repeat() {
+    fn test_bit_spec_with_repeat() {
         let data = "3[4..7]..6[0..5];48";
 
         let (_, r) = bit_spec(data).unwrap();
@@ -474,7 +474,7 @@ mod tests {
         assert_eq!(r, expected);
     }
     #[test]
-    fn test_word_range() {
+    fn test_bit_spec() {
         let data = "3[4..7]..6[0..5]";
 
         let (_, r) = bit_spec(data).unwrap();
@@ -552,7 +552,7 @@ mod tests {
 
     // Not recommanded, but still accepted patterns.
     #[test]
-    fn test_word_range_special_cases() {
+    fn test_bit_spec_special_cases() {
         let data = "3..5..4[]";
         let (_, r) = bit_spec(data).unwrap();
         let expected = WordRange {
