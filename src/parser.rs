@@ -153,8 +153,8 @@ fn condition(input: &str) -> IResult<&str, Condition> {
 }
 
 fn fixed_repeat(input: &str) -> IResult<&str, Repeat> {
-    // let (remaining, r) = (u8_parser.map(|value| Repeat::Fixed(value)))(input)?;
-    let (remaining, repeat) = map(u8_parser, |value| Repeat::Fixed(value))(input)?;
+    //let (remaining, repeat) = map(u8_parser, |value| Repeat::Fixed(value))(input)?;
+    let (remaining, repeat) = map(u8_parser,  Repeat::Fixed)(input)?;
 
     Ok((remaining, repeat))
 }
