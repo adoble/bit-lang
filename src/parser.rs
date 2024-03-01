@@ -31,9 +31,9 @@ pub enum BitRange {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Word {
     // No index refers to index = 0
-    index: u8,
+    pub index: u8,
     // No bit spec refers to the whole word
-    bit_range: BitRange,
+    pub bit_range: BitRange,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -60,10 +60,10 @@ pub enum Repeat {
 
 // #[derive(Debug, PartialEq, Copy, Clone)]
 #[derive(Debug, PartialEq, Clone)]
-struct BitSpec {
-    start: Word,
-    end: Option<Word>,
-    repeat: Repeat,
+pub struct BitSpec {
+    pub start: Word,
+    pub end: Option<Word>,
+    pub repeat: Repeat,
 }
 
 fn index(input: &str) -> IResult<&str, u8> {
@@ -222,7 +222,7 @@ fn literal(input: &str) -> IResult<&str, LiteralType> {
 
 // This is the top level parser
 // word_range = word [".." word] [repeat]
-fn bit_spec(input: &str) -> IResult<&str, BitSpec> {
+pub fn bit_spec(input: &str) -> IResult<&str, BitSpec> {
     let (remaining, (start, end, repeat)) =
         //tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
         tuple((word, 
