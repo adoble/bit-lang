@@ -53,6 +53,9 @@ pub enum Repeat {
         condition: Condition,
         limit: u8,
     },
+    // No repeat has been specified.
+    // Having this removes the need to have an extra Option
+    None,
 }
 
 // #[derive(Debug, PartialEq, Copy, Clone)]
@@ -60,7 +63,7 @@ pub enum Repeat {
 struct BitSpec {
     start: Word,
     end: Option<Word>,
-    repeat: Option<Repeat>,
+    repeat: Repeat,
 }
 
 fn index(input: &str) -> IResult<&str, u8> {
@@ -221,9 +224,20 @@ fn literal(input: &str) -> IResult<&str, LiteralType> {
 // word_range = word [".." word] [repeat]
 fn bit_spec(input: &str) -> IResult<&str, BitSpec> {
     let (remaining, (start, end, repeat)) =
-        tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
+        //tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
+        tuple((word, 
+               opt(preceded(tag(".."), word)), 
+               map(opt(repeat), |r| r.unwrap_or(Repeat::None))))
+        (input)?;
 
-    Ok((remaining, BitSpec { start, end, repeat }))
+    Ok((
+        remaining,
+        BitSpec {
+            start,
+            end,
+            repeat,
+        },
+    ))
 }
 
 #[cfg(test)]
@@ -344,7 +358,7 @@ mod tests {
                 bit_range: BitRange::Single(4),
             },
             end: None,
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -356,7 +370,7 @@ mod tests {
                 bit_range: BitRange::Range(4, 6),
             },
             end: None,
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -368,7 +382,7 @@ mod tests {
                 bit_range: BitRange::Range(4, 6),
             },
             end: None,
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -380,7 +394,7 @@ mod tests {
                 bit_range: BitRange::Range(3, 7),
             },
             end: None,
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -392,7 +406,7 @@ mod tests {
                 bit_range: BitRange::WholeWord,
             },
             end: None,
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
     }
@@ -412,7 +426,7 @@ mod tests {
                 index: 6,
                 bit_range: BitRange::Range(0, 5),
             }),
-            repeat: Some(Repeat::Fixed(48)),
+            repeat: Repeat::Fixed(48),
         };
         assert_eq!(r, expected);
 
@@ -435,7 +449,7 @@ mod tests {
                 index: 7,
                 bit_range: BitRange::WholeWord,
             }),
-            repeat: Some(repeat),
+            repeat: repeat,
         };
         assert_eq!(r, expected);
     }
@@ -454,7 +468,7 @@ mod tests {
                 index: 6,
                 bit_range: BitRange::Range(0, 5),
             }),
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -469,7 +483,7 @@ mod tests {
                 index: 7,
                 bit_range: BitRange::WholeWord,
             }),
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -484,7 +498,7 @@ mod tests {
                 index: 5,
                 bit_range: BitRange::WholeWord,
             }),
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -496,7 +510,7 @@ mod tests {
                 bit_range: BitRange::WholeWord,
             },
             end: None,
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
 
@@ -511,7 +525,7 @@ mod tests {
                 index: 6,
                 bit_range: BitRange::Range(0, 5),
             }),
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
     }
@@ -530,7 +544,7 @@ mod tests {
                 index: 4,
                 bit_range: BitRange::WholeWord,
             }),
-            repeat: None,
+            repeat: Repeat::None,
         };
         assert_eq!(r, expected);
     }
