@@ -119,7 +119,18 @@
 //! 3[];(2[])<=48
 //!```
 //!
-//! # Example
+//! ### Literals
+//! The actual state of the bits can be set using a literal. This can be shown with the following examples:
+//! - Using hexadecimal to set word 0
+//! ```text
+//!  [0x23FF]
+//! ```
+//! - Using binary to set word 5
+//! ```text
+//! 5[0b1101_0001]
+//! ```
+//!
+//! # Example Code
 //! ```
 //! use bit_lang::parser::{BitRange, BitSpec, Condition, Repeat, Word};
 //!

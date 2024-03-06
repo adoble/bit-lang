@@ -121,7 +121,18 @@ Alternativly one could another condition to mean the same thing:
 3[];(2[])<=48
 ```
 
-## Example
+#### Literals
+The actual state of the bits can be set using a literal. This can be shown with the following examples:
+- Using hexadecimal to set word 0
+```
+ [0x23FF]
+```
+- Using binary to set word 5
+```
+5[0b1101_0001]
+```
+
+## Example Code
 ```rust
 use bit_lang::parser::{BitRange, BitSpec, Condition, Repeat, Word};
 
