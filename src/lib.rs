@@ -143,13 +143,23 @@
 //! }
 //! ```
 
+// TODO:
+// Provide a function that can be directly used with #[serde(deserialize_with = "??")]
 #[allow(dead_code)]
 pub mod parser;
+use std::fmt::Display;
+
 pub use parser::{BitRange, BitSpec, Condition, Repeat, Word};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
     ParseError,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error in bit specification")
+    }
 }
 
 /// Parse the bit-lang specification and return a BitSpec.
