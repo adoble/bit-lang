@@ -31,7 +31,7 @@ pub enum BitRange {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Word {
     // No index refers to index = 0
-    pub index: u8,
+    pub index: usize,
     // No bit spec refers to the whole word
     pub bit_range: BitRange,
 }
@@ -99,7 +99,7 @@ fn fully_qualified_word(input: &str) -> IResult<&str, Word> {
     Ok((
         remaining,
         Word {
-            index: index.unwrap_or(0),
+            index: index.unwrap_or(0).into(),
             bit_range: completed_bit_range,
         },
     ))
@@ -129,7 +129,7 @@ fn literal_word(input: &str) -> IResult<&str, Word> {
     Ok((
         remaining,
         Word {
-            index: index.unwrap_or(0),
+            index: index.unwrap_or(0).into(),
             bit_range: BitRange::Literal(literal),
         },
     ))
