@@ -1,4 +1,4 @@
-//! A language parser for specifying bits in a set of words.
+//! A language parser for specifying consecutive bits in a set of words.
 //!
 //! # Language specification
 //!
@@ -81,6 +81,14 @@
 //! 3[]..4[]
 //!```
 //! Refers to all the bits in word 3 and 4 (e.g a value over two words).
+//!
+//! As the bits specified need to be consecutive. specifiying ranges for each word in
+//! a word range is not allowed. However, the following is possible:
+//! ```text
+//! 3[]..6[0.3]
+//! ```
+//! Here the consective bits in words 3 to 5 as well as the first 4 bits in word 6. This covers
+//! cases where, for instance, a number is specified is less than a multiple of the word size.
 //!
 //! ## Repeating Words
 //!
