@@ -46,12 +46,12 @@ pub enum Condition {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Repeat {
     // A simple fixed number of repititions
-    Fixed(u8),
+    Fixed(usize),
     // A variable number of repitions determined by another word and limited
     Variable {
         word: Word,
         condition: Condition,
-        limit: u8,
+        limit: usize,
     },
     // No repeat has been specified.
     // Having this removes the need to have an extra Option
@@ -154,7 +154,8 @@ fn condition(input: &str) -> IResult<&str, Condition> {
 
 fn fixed_repeat(input: &str) -> IResult<&str, Repeat> {
     //let (remaining, repeat) = map(u8_parser, |value| Repeat::Fixed(value))(input)?;
-    let (remaining, repeat) = map(u8_parser,  Repeat::Fixed)(input)?;
+    //let (remaining, repeat) = map(u8_parser,  Repeat::Fixed)(input)?;
+    let (remaining, repeat) = map(u8_parser,  |r| Repeat::Fixed(r.into()))(input)?;
 
     Ok((remaining, repeat))
 }
@@ -175,7 +176,7 @@ fn variable_repeat(input: &str) -> IResult<&str, Repeat> {
         Repeat::Variable {
             word,
             condition,
-            limit,
+            limit: limit.into(),
         },
     ))
 }
