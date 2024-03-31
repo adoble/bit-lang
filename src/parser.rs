@@ -1,16 +1,13 @@
-#[allow(unused_imports)]
 use nom::{
     branch::alt,
-    bytes::complete::{is_a, tag, take_while1},
+    bytes::complete::tag,
     character::complete::u8 as u8_parser,
-    character::complete::{char, one_of, space0},
-    character::is_digit,
-    combinator::{all_consuming, into, map, opt, recognize, value},
-    multi::{many0, many1},
+    character::complete::{char, one_of},
+    combinator::{map, opt, recognize, value},
+    multi::many1,
     //number::complete::{i32, u8},
-    sequence::{delimited, preceded, separated_pair, terminated, tuple},
+    sequence::{delimited, preceded, separated_pair, tuple},
     IResult,
-    Parser,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -58,6 +55,26 @@ pub enum Repeat {
     None,
 }
 
+impl Repeat {
+    // Get the max number of repeats specified.
+    fn max_repeats(&self) -> usize {
+        match self {
+            Repeat::None => 1,
+            Repeat::Fixed(number) => *number,
+            Repeat::Variable {
+                condition: Condition::Lt,
+                limit,
+                ..
+            } => (*limit) - 1,
+            Repeat::Variable {
+                condition: Condition::Lte,
+                limit,
+                ..
+            } => *limit,
+        }
+    }
+}
+
 // #[derive(Debug, PartialEq, Copy, Clone)]
 #[derive(Debug, PartialEq, Clone)]
 pub struct BitSpec {
@@ -68,6 +85,57 @@ pub struct BitSpec {
 
 fn index(input: &str) -> IResult<&str, u8> {
     (u8_parser)(input)
+}
+
+impl BitSpec {
+    /// Get the max size in bytes of an array that could
+    /// contain the bit specification.
+    pub fn size(&self) -> usize {
+        // Split the pattern matching into two parts as this made the code easier to understand.
+        let n_words = match self {
+            BitSpec {
+                start: _,
+                end: None,
+                ..
+            } => 1,
+            BitSpec {
+                start: Word { index: w, .. },
+                end: Some(Word { index: v, .. }),
+                ..
+            } => v - w + 1,
+        };
+
+        let repeats = match self {
+            BitSpec {
+                repeat: Repeat::Fixed(limit),
+                ..
+            } => *limit,
+            BitSpec {
+                repeat:
+                    Repeat::Variable {
+                        condition: Condition::Lt,
+                        limit,
+                        ..
+                    },
+                ..
+            } => *limit - 1,
+            BitSpec {
+                repeat:
+                    Repeat::Variable {
+                        condition: Condition::Lte,
+                        limit,
+                        ..
+                    },
+                ..
+            } => *limit,
+            BitSpec {
+                repeat: Repeat::None,
+                ..
+            } => 1,
+        };
+
+        n_words * repeats
+    }
 }
 
 fn single_bit(input: &str) -> IResult<&str, BitRange> {
@@ -155,7 +223,7 @@ fn condition(input: &str) -> IResult<&str, Condition> {
 fn fixed_repeat(input: &str) -> IResult<&str, Repeat> {
     //let (remaining, repeat) = map(u8_parser, |value| Repeat::Fixed(value))(input)?;
     //let (remaining, repeat) = map(u8_parser,  Repeat::Fixed)(input)?;
-    let (remaining, repeat) = map(u8_parser,  |r| Repeat::Fixed(r.into()))(input)?;
+    let (remaining, repeat) = map(u8_parser, |r| Repeat::Fixed(r.into()))(input)?;
 
     Ok((remaining, repeat))
 }
@@ -226,19 +294,10 @@ fn literal(input: &str) -> IResult<&str, LiteralType> {
 pub fn bit_spec(input: &str) -> IResult<&str, BitSpec> {
     let (remaining, (start, end, repeat)) =
         //tuple((word, opt(preceded(tag(".."), word)), opt(repeat)))(input)?;
-        tuple((word, 
-               opt(preceded(tag(".."), word)), 
-               map(opt(repeat), |r| r.unwrap_or(Repeat::None))))
-        (input)?;
+        tuple((word, opt(preceded(tag(".."), word)), 
+               map(opt(repeat), |r| r.unwrap_or(Repeat::None))))(input)?;
 
-    Ok((
-        remaining,
-        BitSpec {
-            start,
-            end,
-            repeat,
-        },
-    ))
+    Ok((remaining, BitSpec { start, end, repeat }))
 }
 
 #[cfg(test)]
@@ -347,6 +406,35 @@ mod tests {
 
         let data = "==";
         assert!(condition(data).is_err());
+    }
+
+    #[test]
+    fn test_max_repeats() {
+        let repeat = Repeat::None;
+        assert_eq!(repeat.max_repeats(), 1);
+
+        let repeat = Repeat::Fixed(5);
+        assert_eq!(repeat.max_repeats(), 5);
+
+        let repeat = Repeat::Variable {
+            condition: Condition::Lt,
+            limit: 6,
+            word: Word {
+                index: 5,
+                bit_range: BitRange::WholeWord,
+            },
+        };
+        assert_eq!(repeat.max_repeats(), 5);
+
+        let repeat = Repeat::Variable {
+            condition: Condition::Lte,
+            limit: 6,
+            word: Word {
+                index: 5,
+                bit_range: BitRange::WholeWord,
+            },
+        };
+        assert_eq!(repeat.max_repeats(), 6);
     }
 
     #[test]
