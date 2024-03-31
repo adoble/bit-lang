@@ -362,4 +362,25 @@ mod tests {
         };
         assert_eq!(bit_spec, expected);
     }
+
+    #[test]
+    fn test_max_size() {
+        let bit_spec = parse("4[]").unwrap();
+        assert_eq!(bit_spec.max_size(), 1);
+
+        let bit_spec = parse("4[]..7[]").unwrap();
+        assert_eq!(bit_spec.max_size(), 4);
+
+        let bit_spec = parse("4[]..5[]").unwrap();
+        assert_eq!(bit_spec.max_size(), 2);
+
+        let bit_spec = parse("4[]..5[];5").unwrap();
+        assert_eq!(bit_spec.max_size(), 10);
+
+        let bit_spec = parse("4[]..5[];(3[])<6").unwrap();
+        assert_eq!(bit_spec.max_size(), 10);
+
+        let bit_spec = parse("4[]..5[];(3[])<=6").unwrap();
+        assert_eq!(bit_spec.max_size(), 12);
+    }
 }

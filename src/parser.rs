@@ -90,8 +90,7 @@ fn index(input: &str) -> IResult<&str, u8> {
 impl BitSpec {
     /// Get the max size in bytes of an array that could
     /// contain the bit specification.
-    pub fn size(&self) -> usize {
-        // Split the pattern matching into two parts as this made the code easier to understand.
+    pub fn max_size(&self) -> usize {
         let n_words = match self {
             BitSpec {
                 start: _,
@@ -105,34 +104,7 @@ impl BitSpec {
             } => v - w + 1,
         };
 
-        let repeats = match self {
-            BitSpec {
-                repeat: Repeat::Fixed(limit),
-                ..
-            } => *limit,
-            BitSpec {
-                repeat:
-                    Repeat::Variable {
-                        condition: Condition::Lt,
-                        limit,
-                        ..
-                    },
-                ..
-            } => *limit - 1,
-            BitSpec {
-                repeat:
-                    Repeat::Variable {
-                        condition: Condition::Lte,
-                        limit,
-                        ..
-                    },
-                ..
-            } => *limit,
-            BitSpec {
-                repeat: Repeat::None,
-                ..
-            } => 1,
-        };
+        let repeats = self.repeat.max_repeats();
 
         n_words * repeats
     }
