@@ -152,8 +152,18 @@
 //! ```
 
 // TODO:
-// Provide a function that can be directly used with #[serde(deserialize_with = "??")]
-#[allow(dead_code)]
+// - Provide a function that can be directly used with #[serde(deserialize_with = "??")]
+// - The user needs to calculate the position of a variable word which can be complicated, espacially
+//   if this is after a varaible repeatiing group. A posible solution would be to to assign
+//   a symbolic name to a bit spec and then have a notation that the position of the word(group) is
+//   after that. Prosposal example:
+//       frequencies: 4[]..5[];(3[])<20
+//       station_count: 0[];after frequencies
+//       [0]..1[];(station_count)<10 after station_count
+//   The positions are adapted based on what was before (this raises the question as to why
+//   use abolution positions at all?).
+//   If using something like ddgen then the symbolic names do not need to be specified, but
+//   are the same as the field name..#[allow(dead_code)]
 pub mod parser;
 use std::fmt::Display;
 
